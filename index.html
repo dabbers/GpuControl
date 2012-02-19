@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="http://localhost:8080/socket.io/socket.io.js"></script>
+    <script> 
+        var socket = io.connect('http://localhost:8080');
+       
+        socket.on('denied', function (data) {
+            $('#error-' + data.name ).fadeIn();
+            setTimeout( function(){ $('#error-' + data.name ).fadeOut();}, 10000 );
+        });
+        socket.on('auth', function (data) {
+
+            if ( data.result == "success" )
+            {
+                $('#loginBox').fadeOut( function() { $('#data').fadeIn(function(){socket.emit('init');}); } );
+                
+            }
+            else
+            {
+                $('#loginError').fadeIn();
+                setTimeout( function(){ $('#loginError').fadeOut();}, 10000 );
+            }
+        });
+        socket.on('news', function (data) {
+            //console.log( data );
+            var d = jQuery.parseJSON( data );
+            if ( $('#gpu-' + d.name ).length == 0 )
+            {
+                var sToAdd = "<h2 style=\"text-decoration:underline;\">" + d.name + " <a href=\"#\" onclick=\"$('#gpu-"+d.name+"').fadeOut();return false;\">(X)</a></h2><div style=\"color: #ca0000; display:none;\" id=\"error-" + d.name + "\">Sorry, we were uanble to perform that last action!</div>"
+                for( t in d.data )
+                {
+
+                    sToAdd += "<h4>" + d.data[t][0] + "</h4>" +
+                        "<div id=\"gpu-" + d.name + t + "-temp\">GPU Temp: " + d.data[t][1] + "</div>" +
+                        "<div id=\"gpu-" + d.name + t + "-spd\">GPU Fan Speed: " + d.data[t][2] + "</div>" +
+                        "Change Fan Speed to <span id=\"gpu-"+d.name+t+"-newspd\">" + d.data[t][2] + "</span><br />" +
+                        "<input id=\"gpu-" + d.name + t + "-adjust\" type=\"range\" min=\"10\" max=\"90\" value=\"27\" onchange=\"$('#gpu-" + d.name + t + "-newspd').html(this.value);\" /><br />" +
+                        "<input type=\"button\" onclick=\"socket.emit('fan', {machine:'" + d.name + "',gpu:" + t + ",value:$('#gpu-" + d.name + t + "-newspd').html() } );\" value=\"Adjust\"  />"
+                }
+                $('#data').append( '<div id="gpu-' + d.name + '">' + sToAdd + '</div>');
+            }
+            else
+            {
+                var sToAdd = "<h2 style=\"text-decoration:underline;\">" + d.name + " <a href=\"#\" onclick=\"$('#gpu-"+d.name+"').fadeOut();return false;\">(X)</a></h2>"
+                for( t in d.data )
+                {
+                    $("#gpu-" + d.name + t + "-temp").html( "GPU Temp: " + d.data[t][1] );
+                    $("#gpu-" + d.name + t + "-spd").html( "GPU Fan Speed: " + d.data[t][2] );
+
+                    }
+
+            }
+        });
+    </script>
+    <title>GPU Control</title>
+</head>
+<body>
+    <div id="loginBox">
+        Please Login:<br />
+        <div style="color: #ca0000; display:none;" id="loginError">Sorry, you have entered an invalid password!</div>
+        <input type="password" id="loginPW" /><input type="button" onclick="socket.emit( 'login', { 'pw': $('#loginPW').attr( 'value' ) } );" />
+    </div>
+    <div style="display: none;" id="data">Machine List:<br /></div>
+
+</body>
+</html>
